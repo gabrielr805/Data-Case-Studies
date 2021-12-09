@@ -1,0 +1,540 @@
+---
+title: "Case Study Bike Reports"
+author: "Gabriel"
+date: "11/16/2021"
+output: 
+    pdf_document:
+      latex_engine: xelatex
+---
+# Part 1: Introduction
+
+In 2016, Cyclistic launched a successful bike-share offering. Since then, the program has grown to a fleet of 5,824 bicycles that are geotracked and locked into a network of 692 stations across Chicago. The bikes can be unlocked from one station and returned to any other station in the system anytime. Until now, Cyclistic’s marketing strategy relied on building general awareness and appealing to broad consumer segments. One approach that helped make these things possible was the flexibility of its pricing plans: single-ride passes, full-day passes, and annual memberships. Customers who purchase single-ride or full-day passes are referred to as casual riders. Customers who purchase annual memberships are Cyclistic members. Cyclistic’s finance analysts have concluded that annual members are much more profitable than casual riders. Although the pricing flexibility helps Cyclistic attract more customers, Moreno believes that maximizing the number of annual members will be key to future growth. Rather than creating a marketing campaign that targets all-new customers, Moreno believes there is a very good chance to convert casual riders into members. She notes that casual riders are already aware of the Cyclistic program and have chosen Cyclistic for their mobility needs. Moreno has set a clear goal: Design marketing strategies aimed at converting casual riders into annual members. In order to do that, however, the marketing analyst team needs to better understand how annual members and casual riders differ, why casual riders would buy a membership, and how digital media could affect their marketing tactics. Moreno and her team are interested in analyzing the Cyclistic historical bike trip data to identify trends.
+
+For this case study, as a  junior data analyst, I worked on analyzing the ridership data for 2020 and 2021. 
+
+
+## Study Problem
+
+The main problems I will be analyzing for the project are the following:
+
+1. How do annual members and casual riders use Cyclistic bikes differently?
+2. Why would casual riders buy Cyclistic annual memberships?
+3. How can Cyclistic use digital media to influence casual riders to become members?
+
+
+### Objectives of Analysis
+
+
+
+### Main Objective
+
+* Analyze the behavior of the trips made in the last year according to the type of membership of the users of the service.
+
+### Secondary Objective
+
+* Give a description of the types of bicycles and the classes of members who used the service in the last year
+
+* Give a description of the duration of the trips stratified by types of bicycle and type of member
+
+* Carry out an evaluation of the temporality by day and month of the trips made stratified by type of bicycle and category of member.
+
+## Selection criteria of analysis
+
+### Inclusion criteria
+
+* All rides performed in the last 12 months (September 2020 to September 2021)
+
+* All available data from the divvy-tripdata webpage ()
+
+### Exclusion criteria
+
+* All trips higher or greater than 24 hours
+
+* All trips who had negative values in its estimation of duration
+
+* Missing case values 
+
+# Part 2: Dataset Managment
+
+## Library and Working Directory
+In this section, we present the packages requiered for loading the datasets in .csv format
+```{r Library Managment, echo=TRUE, message=FALSE, warning=FALSE}
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(RColorBrewer)
+library(ggplot2)
+library(data.table)
+library(lubridate)
+```
+
+```{r Working Directory, echo=TRUE, message=FALSE, warning=FALSE}
+setwd("~/Data Analysis Cert Google/Case Study Bike Datasets/Case Study Bikes CSV")
+
+```
+
+## Creating Dataset
+
+```{r Files Loading, echo=TRUE, message=FALSE, warning=FALSE}
+#Year 2020
+base2020.09<-read.csv("2020-09-divvy-tripdata.csv")
+base2020.10<-read.csv("2020-10-divvy-tripdata.csv")
+base2020.11<-read.csv("2020-11-divvy-tripdata.csv")
+base2020.12<-read.csv("2020-12-divvy-tripdata.csv")
+
+#AÃ±o 2021
+base2021.01<-read.csv("2021-01-divvy-tripdata.csv")
+base2021.02<-read.csv("2021-02-divvy-tripdata.csv")
+base2021.03<-read.csv("2021-03-divvy-tripdata.csv")
+base2021.04<-read.csv("2021-04-divvy-tripdata.csv")
+base2021.05<-read.csv("2021-05-divvy-tripdata.csv")
+base2021.06<-read.csv("2021-06-divvy-tripdata.csv")
+base2021.07<-read.csv("2021-07-divvy-tripdata.csv")
+base2021.08<-read.csv("2021-08-divvy-tripdata.csv")
+base2021.09<-read.csv("2021-09-divvy-tripdata.csv")
+
+
+```
+
+This code is used to combine all the data frames from all the months in 2020 and 2021 that we will be examining
+
+```{r Final Bike Dataset, echo=TRUE, message=FALSE, warning=FALSE}
+bike.dataset<-rbind(base2020.09,
+                    base2020.10,
+                    base2020.11,
+                    base2020.12, 
+                    base2021.01,
+                    base2021.02,
+                    base2021.03,
+                    base2021.04,
+                    base2021.05,
+                    base2021.06,
+                    base2021.07,
+                    base2021.08,
+                    base2021.09)
+```
+
+This segment is used to eliminate latitute and longitude of the dataset
+```{r}
+bike.dataset.2<-bike.dataset%>%dplyr::select(-start_lat,
+                                             -start_lng,
+                                             -end_lat,
+                                             -end_lng)
+```
+
+## Recoding Dataset
+
+With this code I changed the format of the time in order to be able to subtract the times and find trip lenght and subtract the time from ended_at to started_at
+```{r}
+bike.dataset.2$ended_at<-strptime(bike.dataset.2$ended_at, format="%Y-%m-%d  %H:%M:%S")
+bike.dataset.2$started_at<-strptime(bike.dataset.2$started_at, format="%Y-%m-%d  %H:%M:%S")
+bike.dataset.2$time<-bike.dataset.2$ended_at-bike.dataset.2$started_at 
+```
+
+I converted the time to an analyzable number and converted the time in MINUTES
+```{r}
+bike.dataset.2$time_2<-as.numeric(bike.dataset.2$time)
+bike.dataset.2$minutes<-(bike.dataset.2$time_2/60)
+```
+
+I erase all trips higher than 24 hrs and negative values
+
+```{r}
+bike.dataset.2$minutes[bike.dataset.2$minutes>=1440]<-NA 
+bike.dataset.2$minutes[bike.dataset.2$minutes<=0]<-NA 
+```
+
+I create a new variable that meassures the time in HOURS
+```{r}
+bike.dataset.2$hours<-(bike.dataset.2$minutes/60)
+```
+
+I create a new variable that exclude those trips higher than 4 hours and name it as hours.2
+```{r}
+bike.dataset.2$hours.2<-bike.dataset.2$hours
+bike.dataset.2$hours.2[bike.dataset.2$hours>=4]<-NA
+```
+
+I create a new variable that groups for trips categories
+```{r}
+bike.dataset.2$hours.categories <- NULL 
+bike.dataset.2$hours.categories[bike.dataset.2$hours.2>=0 & bike.dataset.2$hours.2<1] <- 1
+bike.dataset.2$hours.categories[bike.dataset.2$hours.2>=1 & bike.dataset.2$hours.2<3] <- 2
+bike.dataset.2$hours.categories[bike.dataset.2$hours.2>=3] <- 3
+bike.dataset.2$hours.categories <- factor(bike.dataset.2$hours.categories, 
+                                           labels = c("Less than One Hour", 
+                                                      "One to Three Hours", 
+                                                      "More than Three Hours"))
+```
+
+I change the labels of the rideable_type variable
+```{r}
+bike.dataset.2$rideable_type <- factor(bike.dataset.2$rideable_type, 
+                                       labels = c("Classic Bikes", 
+                                                  "Docked Bikes", 
+                                                  "Electric Bikes"))
+```
+
+
+
+
+
+
+
+
+
+# Part 3: Descriptive Results
+
+## Available Information
+
+Available subjects in the study problem 
+
+```{r}
+nrow(bike.dataset.2)
+```
+
+Missing values
+
+```{r}
+sum(is.na(bike.dataset.2$minutes))
+```
+
+Available results that could be analysed
+
+```{r}
+sum(!is.na(bike.dataset.2$minutes))
+```
+
+## Simple Summary Statistics
+
+Summary statistics of the trip duration in minutes
+
+```{r}
+summary(bike.dataset.2$minutes)
+```
+
+Summary statistics of the trip duration in hours
+
+```{r}
+summary(bike.dataset.2$hours)
+```
+
+Summary statistics of the trip duration in hours (excluding trips with higher than 4 hours)
+
+```{r}
+summary(bike.dataset.2$hours.2)
+```
+
+Frequency and percentage of types of bicycles
+
+```{r}
+table(bike.dataset.2$rideable_type)
+prop.table(table(bike.dataset.2$rideable_type))*100
+```
+
+Frequency and percentage of the types of members
+
+```{r}
+table(bike.dataset.2$member_casual)
+round(prop.table(table(bike.dataset.2$member_casual))*100,3)
+```
+
+Frequency and percentage of the groups for trips categories
+
+```{r}
+table(bike.dataset.2$hours.categories)
+round(prop.table(table(bike.dataset.2$hours.categories))*100,3)
+```
+
+## Cross-Tables Statistics
+
+Frequency and percentage of the types of member by types of bicycles categories
+
+```{r}
+table(bike.dataset.2$rideable_type,bike.dataset.2$member_casual)
+round(prop.table(table(bike.dataset.2$rideable_type,bike.dataset.2$member_casual),2)*100,3)
+```
+
+Frequency and percentage of the types of member by trips categories
+
+```{r}
+table(bike.dataset.2$rideable_type,bike.dataset.2$hours.categories)
+round(prop.table(table(bike.dataset.2$rideable_type,bike.dataset.2$hours.categories),2)*100,3)
+```
+
+# Part 4: Data Visualization and Interpretation of the Results
+
+### Figure 1: Duration of Rides
+
+```{r}
+hist(bike.dataset.2$hours.2, xlab ="Hours of service used", ylab = "Number of Trips", main = "Duration of Rides")
+```
+
+When it comes to duration of rides, most rides were half an hour or less. A very small percentage of rides were in the over two-hour range. When graphing the data, more than 95% of rides were less than one hour. In terms of membership type and overall rider ship, casual riders made up about 44% of all rides while riders who were part of the membership program made up around 56% of the rides. 
+
+### Figure 2: Rides Categories
+
+```{r}
+ggplot(data=bike.dataset.2[!is.na(bike.dataset.2$hours.categories),], aes(x=hours.categories))+
+  geom_bar(aes(y = (..count..)/sum(..count..))) + 
+  scale_y_continuous(labels=scales::percent)+
+  xlab("Hours Categories")+
+  ylab("Absolute Percentage")+
+  theme_classic()+
+  labs(title = "Usage by Hours Categories", caption = "Data obtained from Cyclistic Bike Share")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+About half of all rides utilized Classic Bikes, followed by Electric Bikes at 30% and Docked Bikes made up the remaining 20%. When looking at which types of bikes are used by which types of users, members use Classic Bikes at a higher rate. Docked Bikes and Electric Bikes are used equally by both casuals and members. 
+
+### Figure 3: Usage by Type of Member
+
+```{r}
+ggplot(data=bike.dataset.2, aes(x=member_casual))+
+  geom_bar(aes(y = (..count..)/sum(..count..))) + 
+  scale_y_continuous(labels=scales::percent)+
+  xlab("Members Type")+
+  ylab("Absolute Percentage")+
+  theme_classic()+
+  labs(title = "Usage by Type of Member", caption = "Data obtained from Cyclistic Bike Share")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+```
+
+### Figure 4: Usage by Bike Type
+
+```{r}
+ggplot(data=bike.dataset.2, aes(x=rideable_type))+
+  geom_bar(aes(y = (..count..)/sum(..count..))) + 
+  scale_y_continuous(labels=scales::percent)+
+  xlab("Types of Bicycles")+
+  ylab("Absolute Percentage")+
+  theme_classic()+
+  labs(title = "Usage by Bike Type", caption = "Data obtained from Cyclistic Bike Share")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+### Figure 5: Usage by Bike Type by Type of Member
+
+```{r}
+ggplot(data=bike.dataset.2, aes(x=rideable_type, fill=member_casual))+
+  geom_bar(aes(y = (..count..)/sum(..count..))) + 
+  scale_y_continuous(labels=scales::percent)+
+  xlab("Types of Bicycles")+
+  ylab("Absolute Percentage")+
+  theme_classic()+
+  labs(title = "Usage by Bike Type", caption = "Data obtained from Cyclistic Bike Share", fill="Membership Type")+
+  theme(plot.title = element_text(hjust = 0.5))+ 
+  scale_fill_brewer(palette = "Set1")
+```
+
+### Figure 6: Trip Lenght by Bike Type
+
+```{r}
+ggplot(data=bike.dataset.2[!is.na(bike.dataset.2$hours.categories),], aes(x=hours.categories, fill=rideable_type))+ 
+  geom_bar(position = "fill") + 
+  scale_y_continuous(labels=scales::percent)+
+  xlab("Duration of trip")+
+  ylab("Absolute Percentage")+
+  theme_classic()+
+  labs(title = "Trip Lenght by Bike Type", caption = "Data obtained from Cyclistic Bike Share", fill = "Types of Bicycles")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  scale_fill_brewer(palette = "Set1")
+
+```
+
+### Figure 7: Trip Lenght by Bike Type stratified by Member Type
+```{r}
+ggplot(data=bike.dataset.2[!is.na(bike.dataset.2$hours.categories),], aes(x=hours.categories, fill=rideable_type))+
+  geom_bar(position = "fill") + 
+  scale_y_continuous(labels=scales::percent)+
+  xlab("Duration of trip")+
+  ylab("Absolute Percentage")+
+  theme_classic()+
+  labs(title = "Trip Lenght by Bike Type", caption = "Data obtained from Cyclistic Bike Share", fill = "Types of Bicycles")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+  scale_fill_brewer(palette = "Set1")+
+  facet_wrap(~member_casual)
+
+```
+
+When looking at how the duration of trips and how that affects the type of bike that is used, I discovered that as trips take longer users tend to go for docked bikes while they use classic bikes and electric bikes for trips that take less than one hour. This is especially true for casual riders.  This might be that the novelty of riding an electric bike might be an appeal for casual members who use the electric bikes for shorter rides. 
+
+### Figure 8: Trips by days of the week
+
+```{r}
+bike.dataset.2 %>%
+  mutate(weekdays=lubridate::wday(started_at, week_start = 1)) %>% # Transform time to days of the week
+  group_by(weekdays) %>% # This is grouping by days of the week
+  summarize(days_weeks = sum(n())) %>% # Adds up each day of the week
+  mutate(proportion_days_weeks = (days_weeks / 5669219) * 100)  %>% #this will get the percentage per day
+  mutate(weekdays = factor(weekdays, labels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>%
+  ggplot(aes(x = weekdays, y = proportion_days_weeks))+
+  geom_bar(stat = "identity") +
+  xlab("Days of the Week")+
+  ylab("Percentages")+
+  theme_classic()+
+  labs(title = "Trips by days of the week", caption = "Data obtained from Cyclistic Bike Share")
+```
+
+When looking at rides per week, I saw that Saturday and Sunday were the days of the week that had the most customers. Interestingly enough, the rider ship is lowest on Monday and builds up until Saturday and then decreases a bit after Saturday. The composition of each day in terms of type of bike seems to be very similar across all days of the week. 
+
+
+### Figure 9: Trips by days of the week stratified Rideable Type
+
+```{r}
+bike.dataset.2 %>%
+  mutate(weekdays=lubridate::wday(started_at, week_start = 1)) %>% # Transform time to days of the week
+  mutate(weekdays = factor(weekdays, labels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>%
+  group_by(weekdays,rideable_type) %>% # This is grouping by days of the week
+  summarize(days_weeks = sum(n())) %>% # Adds up each day of the week
+  mutate(proportion_days_weeks = (days_weeks / 5669219) * 100)  %>% #this will get the percentage per day
+  ggplot(aes(x = weekdays, y = proportion_days_weeks, fill=rideable_type))+
+  geom_bar(stat = "identity") +
+  xlab("Days of the Week")+
+  ylab("Percentages")+
+  theme_classic()+
+  labs(title = "Trips by days of the week", caption = "Data obtained from Cyclistic Bike Share", fill="Rideable Type")+
+  scale_fill_brewer(palette = "Set1")
+```
+
+### Figure 10: Trips by days of the week stratified Rideable Type and Member Type
+
+```{r}
+bike.dataset.2 %>%
+  mutate(weekdays=lubridate::wday(started_at, week_start = 1)) %>% # Transform time to days of the week
+  mutate(weekdays = factor(weekdays, labels = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"))) %>%
+  group_by(weekdays,rideable_type,member_casual) %>% # This is grouping by days of the week
+  summarize(days_weeks = sum(n())) %>% # Adds up each day of the week
+  mutate(proportion_days_weeks = (days_weeks / 5669219) * 100)  %>% #this will get the percentage per day
+  ggplot(aes(x = weekdays, y = proportion_days_weeks, fill=rideable_type))+
+  geom_bar(stat = "identity") +
+  xlab("Days of the Week")+
+  ylab("Percentages")+
+  facet_wrap(~member_casual)+
+  theme_classic()+
+  labs(title = "Trips by days of the week", caption = "Data obtained from Cyclistic Bike Share", fill="Rideable Type")+
+  scale_fill_brewer(palette = "Set1")+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+```
+
+### Figure 11: Trips by months of years 2020 and 2021
+
+```{r}
+bike.dataset.2 %>%
+  mutate(month=lubridate::month(started_at)) %>% 
+  mutate(year=lubridate::year(started_at)) %>%
+  mutate(month = factor(month, labels = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))) %>%
+  group_by(year,month) %>% # This is grouping by days of the week
+  summarize(Months = sum(n())) %>% # Adds up each day of the week
+  mutate(proportion_days_weeks = (Months / 5669219) * 100)  %>% #this will get the percentage per day
+  ggplot(aes(x = month, y = proportion_days_weeks))+
+  geom_bar(stat = "identity") +
+  xlab("Months")+
+  ylab("Percentages")+
+  theme_classic()+
+  facet_wrap(~year)+
+  labs(title = "Trips by Month", caption = "Data obtained from Cyclistic Bike Share")
+```
+
+### Figure 12: Trips by months of years 2020 and 2021 stratified by Rideable Type
+
+```{r}
+bike.dataset.2 %>%
+  mutate(month=lubridate::month(started_at)) %>% # Transform time to days of the week
+  mutate(year=lubridate::year(started_at)) %>%
+  mutate(month = factor(month, labels = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))) %>%
+  group_by(year,month,rideable_type) %>% # This is grouping by days of the week
+  summarize(Months = sum(n())) %>% # Adds up each day of the week
+  mutate(proportion_days_weeks = (Months / 5669219) * 100)  %>% #this will get the percentage per day
+  ggplot(aes(x = month, y = proportion_days_weeks, fill=rideable_type))+
+  geom_bar(stat = "identity") +
+  xlab("Months")+
+  ylab("Percentages")+
+  theme_classic()+
+  facet_wrap(~year)+
+  labs(title = "Trips by Month", caption = "Data obtained from Cyclistic Bike Share",fill="Rideable Type")+
+  scale_fill_brewer(palette = "Set1")
+
+```
+
+The data that I have from September 2020 to September 2021, shows that ridership is busiest during the Spring and Summer while it goes down during the Fall and Winter. This probably has to do with the fact that cities might be more bike friendly during the summer and spring months because of weather and cities often have more tourists during the summer months.
+
+### Figure 13: Trips by months of years 2020 and 2021 stratified by Rideable Type and Member Type
+
+```{r}
+bike.dataset.2 %>%
+  mutate(month=lubridate::month(started_at)) %>% # Transform time to days of the week
+  mutate(year=lubridate::year(started_at)) %>%
+  mutate(month = factor(month, labels = c("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"))) %>%
+  group_by(year,month,rideable_type,member_casual) %>% # This is grouping by days of the week
+  summarize(Months = sum(n())) %>% # Adds up each day of the week
+  mutate(proportion_days_weeks = (Months / 5669219) * 100)  %>% #this will get the percentage per day
+  ggplot(aes(x = month, y = proportion_days_weeks, fill=rideable_type))+
+  geom_bar(stat = "identity") +
+  xlab("Months")+
+  ylab("Percentages")+
+  theme_classic()+
+  facet_wrap(~member_casual+year)+
+  labs(title = "Trips by Month", caption = "Data obtained from Cyclistic Bike Share",fill="Rideable Type")+
+  scale_fill_brewer(palette = "Set1")+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))
+
+```
+
+### Figure 14: Trips by hours of occurrence
+
+```{r}
+bike.dataset.2 %>%
+  mutate(hour=lubridate::hour(started_at)) %>% 
+  group_by(hour) %>% 
+  summarize(Hours = sum(n())) %>% 
+  mutate(proportion_hours = (Hours / 5669219) * 100)  %>% 
+  ggplot(aes(x = hour, y = proportion_hours))+
+  geom_bar(stat = "identity") +
+  xlab("Hours of Day")+
+  ylab("Percentages")+
+  theme_classic()+
+  labs(title = "Trips by Hour of the Day", caption = "Data obtained from Cyclistic Bike Share")
+```
+
+### Figure 15: Trips by hours of occurrence stratified by Rideable Type
+
+```{r}
+bike.dataset.2 %>%
+  mutate(hour=lubridate::hour(started_at)) %>% 
+  group_by(hour,rideable_type) %>% 
+  summarize(Hours = sum(n())) %>% 
+  mutate(proportion_hours = (Hours / 5669219) * 100)  %>% 
+  ggplot(aes(x = hour, y = proportion_hours, fill=rideable_type))+
+  geom_bar(stat = "identity") +
+  xlab("Hours of Day")+
+  ylab("Percentages")+
+  theme_classic()+
+  labs(title = "Trips by Hour of the Day", caption = "Data obtained from Cyclistic Bike Share",fill="Rideable Type")
+```
+
+### Figure 16: Trips by hours of occurrence stratified by Rideable Type
+
+```{r}
+bike.dataset.2 %>%
+  mutate(hour=lubridate::hour(started_at)) %>% 
+  group_by(hour,rideable_type,member_casual) %>% 
+  summarize(Hours = sum(n())) %>% 
+  mutate(proportion_hours = (Hours / 5669219) * 100)  %>% 
+  ggplot(aes(x = hour, y = proportion_hours, fill=rideable_type))+
+  geom_bar(stat = "identity") +
+  xlab("Hours of Day")+
+  ylab("Percentages")+
+  facet_wrap(~member_casual)+
+  theme_classic()+
+  labs(title = "Trips by Hour of the Day", caption = "Data obtained from Cyclistic Bike Share",fill="Rideable Type")
+```
+
+When looking at the number of rides throughout the day, the busiest hours are during afternoon and evening commuter hours around 3PM and 6PM. This shows that people are more likely to use this service when coming home from work than when getting to work. And when looking at the differences between types of users, Membership users use bikes at an even greater number during those afternoon commuter hours. 
+
+
+# Part 5: Conclusions
+
+In conclusion, Casual users and Members use bikes differently, mainly in the areas of which bikes are used and at what times. Casual users seem to use electric bikes for short trips throughout the day. Membership users tend to use classic bikes and typically tend to have very high usage rates in the afternoon hours typically the hours associated with commute. Casual members may buy Memberships if the company offers them deals for using bikes. The marketing department could use these interpretations to encourage casual riders to ride during commute time and on weekend leisure trips like membership users. 
